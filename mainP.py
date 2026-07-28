@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 
 class Restaurante_Sabor_da_Esquina:
 
@@ -6,4 +7,4 @@ class Restaurante_Sabor_da_Esquina:
 
         # initialize menu and orders
 
-        self.menu ={"burger": 5, "pizza": 8, "Pasta": 7}
+        self.menu ={"MilaPurê de Frango": 5, "Combo Tradicional": 8, "PF Tropical": 7, "Strogo Cruncy": 10}
