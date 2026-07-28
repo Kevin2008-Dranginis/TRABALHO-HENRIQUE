@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 class ItemCardapio(ABC):
     def __init__(self, prato1, prato2, prato3, prato4, prato5, prato6):
-        self._prato1 = prato1
+        self.parmegina = parmegina
         self._prato2 = prato2
         self._prato3 = prato3
         self._prato4 = prato4
@@ -42,4 +42,14 @@ class ItemCardapio(ABC):
     def calcular_preco(self):
         pass
 
-        dw
+    
+
+class Pratos(ItemCardapio):
+    def __init__(self, teste, prato1):
+        self.teste = teste
+        self.prato1 = prato1
+
+    def prato1(self):
+        return super(prato1)
+    
+    
