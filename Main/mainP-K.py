@@ -1,110 +1,19 @@
-from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Nova classe Cliente adicionada para gerenciar os dados e a maioridade
-class Cliente:
-    def __init__(self, nome, cpf, data_nascimento):
-        self.nome = nome
-        self.cpf = cpf
-        self.data_nascimento = data_nascimento  # Espera o formato dd/mm/aaaa
+# Agora seus imports vão funcionar normalmente:
+from Clientes.cliente import (
+    Cliente,
+    formatar_e_validar_cpf,
+    formatar_e_validar_data,
+    carregar_cpfs_salvos,
+    salvar_cpf_no_arquivo
+)
+from Cardapios.cardapio import Prato, Bebida, Sobremesa
+from Pedidos.pedido import Pedido
 
-    def maior_de_idade(self):
-        try:
-            nasc = datetime.strptime(self.data_nascimento, "%d/%m/%Y")
-            agora = datetime.now()
-            # Calcula a idade exata comparando dia, mês e ano
-            idade = agora.year - nasc.year - ((agora.month, agora.day) < (nasc.month, nasc.day))
-            return idade >= 18
-        except ValueError:
-            # Caso a data seja digitada em formato inválido, considera menor por segurança
-            return False
-
-class ItemCardapio(ABC):
-    def __init__(self, nome, preco_base):
-        self.__nome = nome
-        self.preco_base = preco_base
-
-    @property
-    def nome(self):
-        return self.__nome
-
-    @abstractmethod
-    def calcular_preco(self):
-        pass
-
-    @abstractmethod
-    def tempo_preparo(self):
-        pass
-
-class Prato(ItemCardapio):
-    def __init__(self, nome, preco_base, complexidade="simples"):
-        super().__init__(nome, preco_base)
-        self.complexidade = complexidade.lower()
-
-    def calcular_preco(self):
-        if self.complexidade == "atrasado + desconto":
-            return max(0, self.preco_base - 5)
-        return self.preco_base
-
-    def tempo_preparo(self):
-        return {"simples": 15, "medio": 20, "complexo": 40, "atrasado + desconto": 60}.get(self.complexidade, 15)
-
-class Bebida(ItemCardapio):
-    def __init__(self, nome, preco_base, alcoolica=False):
-        super().__init__(nome, preco_base)
-        self.alcoolica = alcoolica
-
-    def calcular_preco(self):
-        return self.preco_base
-
-    def tempo_preparo(self):
-        return 0
-
-class Sobremesa(ItemCardapio):
-    def __init__(self, nome, preco_base):
-        super().__init__(nome, preco_base)
-
-    def calcular_preco(self):
-        return self.preco_base
-
-    def tempo_preparo(self):
-        return 5
-
-class Pedido:
-    TEMPO_ENTREGA = 20
-
-    def __init__(self):
-        self.itens = []
-
-    def adicionar_item(self, item):
-        self.itens.append(item)
-
-    def calcular_total(self):
-        return sum(i.calcular_preco() for i in self.itens)
-
-    def calcular_tempo_preparo(self):
-        if not self.itens:
-            return 0
-        pratos = [i for i in self.itens if isinstance(i, Prato)]
-        outros = [i for i in self.itens if not isinstance(i, Prato)]
-        tempo_pratos = max((p.tempo_preparo() for p in pratos), default=0)
-        tempo_outros = sum(o.tempo_preparo() for o in outros)
-        return tempo_pratos + tempo_outros
-
-    def calcular_tempo_total(self):
-        return self.calcular_tempo_preparo() + self.TEMPO_ENTREGA
-
-    def obter_horarios(self):
-        agora = datetime.now()
-        tempo_preparo = self.calcular_tempo_preparo()
-        horario_pronto = agora + timedelta(minutes=tempo_preparo)
-        horario_entrega = horario_pronto + timedelta(minutes=self.TEMPO_ENTREGA)
-        return {
-            "atual": agora.strftime("%H:%M:%S"),
-            "pronto": horario_pronto.strftime("%H:%M:%S"),
-            "entrega": horario_entrega.strftime("%H:%M:%S")
-        }
-
+# Dicionários com os itens disponíveis no restaurante
 pratos = {
     "1": Prato("PF de Frango", 22, "simples"),
     "2": Prato("Feijoada Completa", 45, "complexo"),
@@ -136,7 +45,6 @@ brindes = {
     "3": Sobremesa("Barra de Chocolate (Diamante)", 0)
 }
 
-# 2. Assinatura alterada para receber o objeto cliente
 def selecionar_categoria(categoria, dicionario, pedido, cliente, eh_bebida=False):
     itens_selecionados = []
     
@@ -154,14 +62,14 @@ def selecionar_categoria(categoria, dicionario, pedido, cliente, eh_bebida=False
         for idx, item in enumerate(itens_selecionados, start=1):
             print(f"{categoria} {idx} ja selecionado: {item.nome}")
 
-        e = input(f"Ensira as opções de {plural} (0 para proximo/sair): ").strip().lower()
+        e = input(f"Insira as opções de {plural} (0 para proximo/sair): ").strip().lower()
         if e == "0":
             break
 
         if e in dicionario:
             item = dicionario[e]
             
-            # 3. Verificação de bebida alcoólica utilizando o método do Cliente
+            # Verificação de maioridade para bebidas alcoólicas
             if eh_bebida and item.alcoolica:
                 if not cliente.maior_de_idade():
                     print("Venda proibida para menores de 18 anos.")
@@ -198,6 +106,10 @@ def selecionar_categoria(categoria, dicionario, pedido, cliente, eh_bebida=False
         else:
             print("Codigo invalido.")
 
+# Carrega os CPFs que já estão salvos no arquivo clientes.txt
+cpfs_cadastrados = carregar_cpfs_salvos()
+
+# Loop Principal da Aplicação
 while True:
     print("\nBEM VINDO AO RESTAURANTE DA ESQUINA !")
     while True:
@@ -205,16 +117,40 @@ while True:
         if inicio == "01":
             break
 
-    # 4. Inserção do cadastro do cliente antes da criação do pedido
     print("\n===== CADASTRO DO CLIENTE =====")
-    nome = input("Nome: ")
-    cpf = input("CPF: ")
-    nascimento = input("Data de nascimento (dd/mm/aaaa): ")
-    cliente = Cliente(nome, cpf, nascimento)
+    nome = input("Nome: ").strip()
 
+    # Validação, máscara automática e verificação de CPF já cadastrado
+    while True:
+        cpf_input = input("CPF (digite apenas os números ou com pontos): ")
+        cpf_valido, erro_cpf = formatar_e_validar_cpf(cpf_input)
+        
+        if cpf_valido:
+            if cpf_valido in cpfs_cadastrados:
+                print("Erro: Este CPF já possui cadastro no sistema!")
+                continue
+            
+            # Registra na memória e salva no arquivo clientes.txt
+            cpfs_cadastrados.add(cpf_valido)
+            salvar_cpf_no_arquivo(cpf_valido)
+            print(f"CPF registrado com sucesso: {cpf_valido}")
+            break
+            
+        print(erro_cpf)
+
+    # Validação e máscara automática da data de nascimento
+    while True:
+        data_input = input("Data de nascimento (ex: 06102007 ou 06/10/2007): ")
+        dados_data, erro_data = formatar_e_validar_data(data_input)
+        if dados_data:
+            data_formatada, dia, mes, ano = dados_data
+            print(f"Data registrada: {data_formatada}")
+            break
+        print(erro_data)
+
+    cliente = Cliente(nome, cpf_valido, data_formatada, dia, mes, ano)
     pedido = Pedido()
 
-    # 5. Passagem do parâmetro 'cliente' em todas as chamadas da função
     selecionar_categoria("Prato", pratos, pedido, cliente)
     selecionar_categoria("Bebida", bebidas, pedido, cliente, eh_bebida=True)
     selecionar_categoria("Sobremesa", sobremesas, pedido, cliente)
