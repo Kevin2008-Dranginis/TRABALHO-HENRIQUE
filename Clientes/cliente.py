@@ -21,14 +21,17 @@ def formatar_e_validar_cpf(entrada_cpf):
     """
     Remove pontuações, valida se possui 11 dígitos e aplica a máscara XXX.XXX.XXX-XX.
     """
+    # Remove automaticamente pontos, hífen, espaços e mantém apenas os números do CPF
     numeros = "".join(c for c in entrada_cpf if c.isdigit())
 
     if len(numeros) != 11:
         return None, "Erro: O CPF deve conter exatamente 11 dígitos."
 
+    # Detecta CPFs com todos os números iguais sem usar laços
     if numeros == numeros[0] * 11:
         return None, "Erro: Digite um CPF válido."
 
+    # Formata o CPF usando f-string e fatiamento da string
     cpf_formatado = f"{numeros[:3]}.{numeros[3:6]}.{numeros[6:9]}-{numeros[9:]}"
     return cpf_formatado, None
 
@@ -37,7 +40,8 @@ def formatar_e_validar_data(entrada_data):
     """
     Valida dia/mês/ano e formata automaticamente para DD/MM/AAAA.
     """
-    numeros = "".join(c for c in entrada_data if c.isdigit())
+    # Remove barras, espaços e mantém apenas os números da data
+    numeros = "".join(c for c in entrada_data if c.isdigit()) 
 
     if len(numeros) != 8:
         return None, "Erro: A data deve conter 8 dígitos (Exemplo: 06102007 ou 06/10/2007)."
@@ -48,7 +52,8 @@ def formatar_e_validar_data(entrada_data):
 
     if mes < 1 or mes > 12:
         return None, "Erro: Mês inválido. Deve ser de 01 a 12."
-
+        
+    # Usa uma lista para armazenar os dias de cada mês, evitando vários ifs
     dias_no_mes = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
     # Ajuste para ano bissexto
@@ -69,13 +74,17 @@ def formatar_e_validar_data(entrada_data):
 def carregar_cpfs_salvos():
     """Lê o arquivo clientes.txt e recupera os CPFs cadastrados anteriormente."""
     try:
+        # Usa with para fechar o arquivo automaticamente
         with open("clientes.txt", "r", encoding="utf-8") as arquivo:
+            # Lê todas as linhas, remove espaços e guarda os CPFs sem duplicatas
             return set(linha.strip() for linha in arquivo if linha.strip())
+    # Se o arquivo não existir, retorna um conjunto vazio sem interromper o programa
     except FileNotFoundError:
         return set()
 
 
 def salvar_cpf_no_arquivo(cpf):
     """Escreve um novo CPF no arquivo clientes.txt."""
+    # Abre o arquivo em modo de adicionar, sem apagar os CPFs já cadastrados
     with open("clientes.txt", "a", encoding="utf-8") as arquivo:
         arquivo.write(f"{cpf}\n")
